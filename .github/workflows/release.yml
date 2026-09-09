@@ -21,6 +21,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # goreleaser `sboms:` shells out to syft
+      - uses: anchore/sbom-action/download-syft@v0
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
