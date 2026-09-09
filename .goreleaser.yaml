@@ -78,7 +78,12 @@ brews:
       owner: clamoriniere
       name: homebrew-tap
       branch: main
-      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      # Push over SSH with a write deploy key scoped to homebrew-tap
+      # (secret HOMEBREW_TAP_DEPLOY_KEY on this repo) — no account-wide PAT.
+      git:
+        url: "ssh://git@github.com/clamoriniere/homebrew-tap.git"
+        private_key: "{{ .Env.HOMEBREW_TAP_DEPLOY_KEY }}"
+        ssh_command: "ssh -i {{ .KeyPath }} -o StrictHostKeyChecking=accept-new -F /dev/null"
     directory: Formula
     homepage: "https://github.com/clamoriniere/ssh-agent-relay"
     description: "Bridge a host SSH agent into a dev container over a loopback TCP hop"
