@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: ssh-agent-relay
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ssh-agent-relay
+    binary: ssh-agent-relay
+    main: .
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .Commit }}
+      - -X main.date={{ .CommitDate }}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: ssh-agent-relay
+    ids:
+      - ssh-agent-relay
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - src: contrib/host-autostart.sh
+        dst: ssh-agent-relay-autostart
+      - src: contrib/com.clamoriniere.ssh-agent-relay.plist
+        dst: contrib/com.clamoriniere.ssh-agent-relay.plist
+
+checksum:
+  name_template: checksums.txt
+
+sboms:
+  - artifacts: archive
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "Merge pull request"
+      - "Merge branch"
+
+# Host install (macOS). The linux container path uses install.sh / the
+# devcontainer Feature, not Homebrew.
+#
+# NOTE: `brews` is deprecated in GoReleaser (still fully functional in v2.18 —
+# it is the only generator that emits a working `service do` block for
+# `brew services`). The release workflow runs with `--skip=validate` so the
+# deprecation notice does not fail the release. Revisit if GoReleaser hard-
+# removes it.
+brews:
+  - name: ssh-agent-relay
+    ids:
+      - ssh-agent-relay
+    repository:
+      owner: clamoriniere
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/clamoriniere/ssh-agent-relay"
+    description: "Bridge a host SSH agent into a dev container over a loopback TCP hop"
+    license: "MIT"
+    install: |
+      bin.install "ssh-agent-relay"
+      bin.install "ssh-agent-relay-autostart"
+    service: |
+      run [opt_bin/"ssh-agent-relay", "serve",
+           "--listen", "127.0.0.1:17890",
+           "--token-file", "#{Dir.home}/.config/ssh-agent-relay/token",
+           "--idle-exit", "30m"]
+      keep_alive true
+      log_path "#{Dir.home}/Library/Logs/ssh-agent-relay.log"
+      error_log_path "#{Dir.home}/Library/Logs/ssh-agent-relay.log"
+    caveats: |
+      Start the host relay:
+        brew services start ssh-agent-relay
+
+      For a non-default SSH agent (1Password, Secretive), expose its socket to the
+      launchd session once:
+        launchctl setenv SSH_AUTH_SOCK "$SSH_AUTH_SOCK"
+
+      Or let a dev container start it on demand via ssh-agent-relay-autostart.
+    test: |
+      system "#{bin}/ssh-agent-relay", "version"
+
+release:
+  github:
+    owner: clamoriniere
+    name: ssh-agent-relay
+  draft: false
+  prerelease: auto
+  name_template: "v{{ .Version }}"

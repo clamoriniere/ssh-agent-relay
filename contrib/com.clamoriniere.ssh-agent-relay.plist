@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Host-side ssh-agent-relay as a launchd user agent.
+
+  Prefer `brew services start ssh-agent-relay` (the formula ships an equivalent
+  service). Use this file only for a manual, non-Homebrew install.
+
+  Edit before use:
+    - the ssh-agent-relay path (/opt/homebrew/bin or wherever it lives)
+    - SSH_AUTH_SOCK: your agent's socket. 1Password's is stable:
+      ~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock
+      (older/newer builds also expose ~/.1password/agent.sock)
+    - all /Users/clamoriniere paths
+
+  Install:
+    cp com.clamoriniere.ssh-agent-relay.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.clamoriniere.ssh-agent-relay.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.clamoriniere.ssh-agent-relay</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/ssh-agent-relay</string>
+    <string>serve</string>
+    <string>--listen</string>
+    <string>127.0.0.1:17890</string>
+    <string>--token-file</string>
+    <string>/Users/clamoriniere/.config/ssh-agent-relay/token</string>
+    <string>--idle-exit</string>
+    <string>30m</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SSH_AUTH_SOCK</key>
+    <string>/Users/clamoriniere/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/clamoriniere/Library/Logs/ssh-agent-relay.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/clamoriniere/Library/Logs/ssh-agent-relay.log</string>
+</dict>
+</plist>

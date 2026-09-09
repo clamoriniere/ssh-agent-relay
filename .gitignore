@@ -1,0 +1,4 @@
+/dist/
+/ssh-agent-relay
+*.out
+*.test
